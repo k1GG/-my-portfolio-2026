@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { fetchProjects, addProject, updateSiteMetadata, fetchSiteMetadata, updateProject, deleteProject, deleteProjectImage, supabase, signInWithEmail, signOut } from './lib/supabase';
+import { fetchProjects, addProject, updateSiteMetadata, fetchSiteMetadata, updateProject, deleteProject, deleteProjectImage, supabase, signInWithEmail, signOut, ADMIN_USER_ID } from './lib/supabase';
 
 // ============================================
 // CONFIG: Edit your contact links here
@@ -93,7 +93,7 @@ const ProjectCard = ({ project, index, onEdit, onDelete, isAdmin }) => {
       className="glass rounded-xl overflow-hidden cursor-pointer group"
     >
       {/* Project Image or Gradient Placeholder */}
-      <div className="relative h-48 overflow-hidden">
+      <div className="relative h-48 overflow-hidden mb-6">
         {project.image_url && !imageError ? (
           <img
             src={project.image_url}
@@ -138,11 +138,11 @@ const ProjectCard = ({ project, index, onEdit, onDelete, isAdmin }) => {
       </div>
 
       {/* Project Info */}
-      <div className="p-5 gap-0.5 flex flex-col">
-        <h3 className="text-xl font-semibold text-white mb-0.5 group-hover:text-cyan-400 transition-colors">
+      <div className="p-8 flex flex-col gap-3">
+        <h3 className="text-xl font-semibold text-white group-hover:text-cyan-400 transition-colors">
           {project.name}
         </h3>
-        <p className="text-gray-400 text-sm mb-0.5 line-clamp-2">
+        <p className="text-gray-400 text-sm line-clamp-2">
           {project.description || 'No description available'}
         </p>
         
@@ -305,6 +305,7 @@ const AddProjectModal = ({ isOpen, onClose, onProjectAdded, editProject }) => {
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [existingImageUrl, setExistingImageUrl] = useState('');
+  const [authError, setAuthError] = useState(null);
 
   // Populate form when editing
   useEffect(() => {
@@ -324,9 +325,48 @@ const AddProjectModal = ({ isOpen, onClose, onProjectAdded, editProject }) => {
     }
   }, [editProject]);
 
-  const handleSubmit = async (e) => {
+  // FIX 4: Check auth status before submit
+  const checkAuthAndSubmit = async (e) => {
     e.preventDefault();
+    setAuthError(null);
     setLoading(true);
+
+    try {
+      // FIX 4: Verify authentication before any upload operation
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.error('Auth verification failed:', authError);
+        setAuthError('Authentication error. Please login again.');
+        setLoading(false);
+        return;
+      }
+      
+      if (!user) {
+        console.warn('No authenticated user - redirecting to login');
+        setAuthError('You must be logged in to add projects. Please login first.');
+        setLoading(false);
+        return;
+      }
+
+      console.log('User authenticated:', user.id);
+      console.log('Admin ID:', ADMIN_USER_ID);
+      console.log('Is admin:', user.id === ADMIN_USER_ID);
+
+      // Continue with the actual submit logic
+      await handleSubmitInternal();
+    } catch (error) {
+      console.error('Auth check error:', error);
+      setAuthError('Authentication failed. Please login again.');
+    }
+    
+    setLoading(false);
+  };
+
+  // Internal submit handler - actual upload and database logic
+  const handleSubmitInternal = async () => {
+    // Loading is already set to true in checkAuthAndSubmit
+    // Don't set it again here to avoid duplicate state updates
 
     try {
       let imageUrl = existingImageUrl;
@@ -351,7 +391,12 @@ const AddProjectModal = ({ isOpen, onClose, onProjectAdded, editProject }) => {
           .from('project-images')
           .upload(newFilePath, imageFile);
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Upload error - bucket_id:', 'project-images');
+          console.error('Upload error - message:', uploadError.message);
+          console.error('Upload error - full:', uploadError);
+          throw uploadError;
+        }
 
         // Get the Public URL
         const { data: urlData } = supabase.storage
@@ -374,7 +419,7 @@ const AddProjectModal = ({ isOpen, onClose, onProjectAdded, editProject }) => {
         // Update existing project
         result = await updateProject(editProject.id, projectData);
       } else {
-        // Add new project
+        // Add new project - user_id is now automatically added in supabase.js
         result = await addProject(projectData);
       }
       
@@ -393,10 +438,22 @@ const AddProjectModal = ({ isOpen, onClose, onProjectAdded, editProject }) => {
         setImagePreview(null);
         setExistingImageUrl('');
         onClose();
+      } else if (result.error) {
+        // FIX 5 & 6: Show detailed error message
+        console.error('Project save failed - Full error:', result.fullError || result.error);
+        setAuthError('Error: ' + (result.error || 'Failed to save project'));
       }
     } catch (error) {
-      console.error('Error saving project:', error.message);
-      alert('Error saving project: ' + error.message);
+      // FIX 5 & 6: Detailed error logging
+      console.error('Error saving project:', error);
+      console.error('Full error object:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
+      setAuthError('Error saving project: ' + error.message);
     }
     
     setLoading(false);
@@ -452,7 +509,7 @@ const AddProjectModal = ({ isOpen, onClose, onProjectAdded, editProject }) => {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={checkAuthAndSubmit} className="space-y-4">
                 <div>
                   <label className="block text-gray-300 text-sm font-medium mb-2">
                     Project Name *
@@ -562,15 +619,15 @@ const ProjectsSection = ({ projects, onEdit, onDelete, isAdmin }) => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-10"
+          className="text-center"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-10">
+          <h2 className="text-4xl md:text-5xl font-bold text-white section-title-spacing">
             My <span className="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">Projects</span>
           </h2>
         </motion.div>
 
         {projects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="projects-gallery-container grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {projects.map((project, index) => (
               <ProjectCard key={project.id} project={project} index={index} onEdit={onEdit} onDelete={onDelete} isAdmin={isAdmin} />
             ))}

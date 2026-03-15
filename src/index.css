@@ -28,6 +28,19 @@ body {
   overflow-x: hidden;
 }
 
+/* Custom spacing for the Projects Section */
+.projects-gallery-container {
+  margin-top: 6rem !important; /* Forces 96px space above the cards */
+  padding-top: 2rem !important;
+  display: grid !important;
+  gap: 3.5rem !important; /* Increases horizontal/vertical space between cards */
+}
+
+.section-title-spacing {
+  margin-bottom: 5rem !important; /* Forces 80px space below the 'My Projects' text */
+  display: block !important;
+}
+
 /* Glassmorphism utilities */
 .glass {
   background: rgba(255, 255, 255, 0.05);
