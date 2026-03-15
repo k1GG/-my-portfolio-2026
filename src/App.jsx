@@ -114,7 +114,7 @@ const ProjectCard = ({ project, index, onEdit, onDelete, isAdmin }) => {
         
         {/* Action Buttons - Edit & Delete - Only show for admin */}
         {isAdmin && (
-          <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(project); }}
               className="p-2 rounded-lg bg-dark-900/80 border border-white/20 text-gray-400 hover:text-cyan-400 hover:border-cyan-400 transition-all duration-300"
@@ -595,7 +595,7 @@ const ProjectsSection = ({ projects, onEdit, onDelete, isAdmin }) => {
 };
 
 // About Section with live editing
-const AboutSection = ({ metadata, onUpdate }) => {
+const AboutSection = ({ metadata, onUpdate, isAdmin }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({});
   const [isSaving, setIsSaving] = useState(false);
@@ -657,15 +657,17 @@ const AboutSection = ({ metadata, onUpdate }) => {
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-10">
               About <span className="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">Me</span>
             </h2>
-            <button
-              onClick={handleEdit}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-              title="Edit About Section"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 hover:text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </button>
+            {isAdmin && (
+              <button
+                onClick={handleEdit}
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                title="Edit About Section"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 hover:text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+            )}
           </div>
           <AnimatePresence mode="wait">
             {isEditing ? (
@@ -863,7 +865,7 @@ const AboutSection = ({ metadata, onUpdate }) => {
 };
 
 // Contact Section
-const ContactSection = ({ metadata, onUpdate }) => {
+const ContactSection = ({ metadata, onUpdate, isAdmin }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({});
   const [isSaving, setIsSaving] = useState(false);
@@ -922,14 +924,16 @@ const ContactSection = ({ metadata, onUpdate }) => {
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-10">
               Get In <span className="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">Touch</span>
             </h2>
-            <button
-              onClick={handleEdit}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-              </svg>
-            </button>
+            {isAdmin && (
+              <button
+                onClick={handleEdit}
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+              </button>
+            )}
           </div>
           {isEditing ? (
             <div className="mt-0.5 max-w-2xl mx-auto space-y-3">
@@ -1482,8 +1486,8 @@ function App() {
       <main>
         <HeroSection />
         <ProjectsSection projects={projects} onEdit={handleEdit} onDelete={handleDelete} isAdmin={isAdmin} />
-        <AboutSection metadata={siteMetadata} onUpdate={setSiteMetadata} />
-        <ContactSection metadata={siteMetadata} onUpdate={setSiteMetadata} />
+        <AboutSection metadata={siteMetadata} onUpdate={setSiteMetadata} isAdmin={isAdmin} />
+        <ContactSection metadata={siteMetadata} onUpdate={setSiteMetadata} isAdmin={isAdmin} />
       </main>
       
       <Footer siteMetadata={siteMetadata} isAdmin={isAdmin} isViewer={isViewer} onLogout={handleLogout} />
