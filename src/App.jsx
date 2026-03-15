@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { fetchProjects, addProject, updateSiteMetadata, fetchSiteMetadata, updateProject, deleteProject, deleteProjectImage, supabase } from './lib/supabase';
+import { fetchProjects, addProject, updateSiteMetadata, fetchSiteMetadata, updateProject, deleteProject, deleteProjectImage, supabase, signInWithEmail, signOut } from './lib/supabase';
 
 // ============================================
 // CONFIG: Edit your contact links here
@@ -55,7 +55,7 @@ const getGradientColors = (name) => {
 };
 
 // Project Card Component with 3D tilt effect
-const ProjectCard = ({ project, index, onEdit, onDelete }) => {
+const ProjectCard = ({ project, index, onEdit, onDelete, isAdmin }) => {
   const [imageError, setImageError] = useState(false);
   const cardRef = useRef(null);
 
@@ -112,27 +112,29 @@ const ProjectCard = ({ project, index, onEdit, onDelete }) => {
         {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-dark-900/80 to-transparent" />
         
-        {/* Action Buttons - Edit & Delete */}
-        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(project); }}
-            className="p-2 rounded-lg bg-dark-900/80 border border-white/20 text-gray-400 hover:text-cyan-400 hover:border-cyan-400 transition-all duration-300"
-            title="Edit Project"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(project); }}
-            className="p-2 rounded-lg bg-dark-900/80 border border-white/20 text-gray-400 hover:text-red-400 hover:border-red-400 transition-all duration-300"
-            title="Delete Project"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
-        </div>
+        {/* Action Buttons - Edit & Delete - Only show for admin */}
+        {isAdmin && (
+          <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit(project); }}
+              className="p-2 rounded-lg bg-dark-900/80 border border-white/20 text-gray-400 hover:text-cyan-400 hover:border-cyan-400 transition-all duration-300"
+              title="Edit Project"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(project); }}
+              className="p-2 rounded-lg bg-dark-900/80 border border-white/20 text-gray-400 hover:text-red-400 hover:border-red-400 transition-all duration-300"
+              title="Delete Project"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Project Info */}
@@ -552,7 +554,7 @@ const FloatingAddButton = ({ onClick }) => {
 };
 
 // Projects Section
-const ProjectsSection = ({ projects, onEdit, onDelete }) => {
+const ProjectsSection = ({ projects, onEdit, onDelete, isAdmin }) => {
   return (
     <section id="projects" className="min-h-screen py-32 px-6 md:px-12 relative z-10 bg-dark-900">
       <div className="max-w-5xl mx-auto">
@@ -570,7 +572,7 @@ const ProjectsSection = ({ projects, onEdit, onDelete }) => {
         {projects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project, index) => (
-              <ProjectCard key={project.id} project={project} index={index} onEdit={onEdit} onDelete={onDelete} />
+              <ProjectCard key={project.id} project={project} index={index} onEdit={onEdit} onDelete={onDelete} isAdmin={isAdmin} />
             ))}
           </div>
         ) : (
@@ -1105,7 +1107,7 @@ const ContactSection = ({ metadata, onUpdate }) => {
 };
 
 // Footer Component
-const Footer = ({ siteMetadata }) => {
+const Footer = ({ siteMetadata, isAdmin, isViewer, onLogout }) => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -1211,20 +1213,38 @@ const Footer = ({ siteMetadata }) => {
           <p className="text-gray-500 text-sm">
             © 2026 Portfolio. All rights reserved.
           </p>
-          <button
-            onClick={scrollToTop}
-            className="flex items-center gap-2 text-gray-500 hover:text-cyan-400 transition-all duration-300 text-sm group"
-          >
-            <span>Back to Top</span>
-            <svg 
-              className="w-4 h-4 group-hover:-translate-y-1 transition-transform duration-300" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
+          
+          <div className="flex items-center gap-4">
+            {/* Logout Button - Show for both admin and viewer */}
+            {(isAdmin || isViewer) ? (
+              <button
+                onClick={onLogout}
+                className="flex items-center gap-2 text-gray-500 hover:text-red-400 transition-all duration-300 text-sm"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Logout</span>
+              </button>
+            ) : (
+              <span className="text-gray-600 text-sm">Welcome, Guest</span>
+            )}
+            
+            <button
+              onClick={scrollToTop}
+              className="flex items-center gap-2 text-gray-500 hover:text-cyan-400 transition-all duration-300 text-sm group"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-            </svg>
-          </button>
+              <span>Back to Top</span>
+              <svg 
+                className="w-4 h-4 group-hover:-translate-y-1 transition-transform duration-300" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </footer>
@@ -1238,14 +1258,25 @@ function App() {
   const [siteMetadata, setSiteMetadata] = useState(null);
   const [editProject, setEditProject] = useState(null);
   const [toast, setToast] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(() => {
+    // Check localStorage for persisted admin state
+    return localStorage.getItem('isAdmin') === 'true';
+  });
+  const [isViewer, setIsViewer] = useState(() => {
+    // Check localStorage for persisted viewer state
+    return localStorage.getItem('isViewer') === 'true';
+  });
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
 
   // Show toast notification
-  const showToast = (message, type = 'success') => {
+  const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
-  };
+  }, []);
 
-  // Load projects function - wrapped in useCallback to stabilize the reference
+  // Load projects function
   const loadProjects = useCallback(async () => {
     try {
       const data = await fetchProjects();
@@ -1271,6 +1302,131 @@ function App() {
     };
     fetchData();
   }, []);
+
+  // Handle admin login
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    
+    const result = await signInWithEmail(loginEmail, loginPassword);
+    
+    if (result.success) {
+      setIsAdmin(true);
+      localStorage.setItem('isAdmin', 'true');
+      setLoginEmail('');
+      setLoginPassword('');
+      showToast('Admin logged in successfully!', 'success');
+    } else {
+      showToast('Login failed: ' + result.error, 'error');
+    }
+    
+    setLoginLoading(false);
+  };
+
+  // Handle viewer login (no password required)
+  const handleViewerLogin = (e) => {
+    e.preventDefault();
+    setIsViewer(true);
+    localStorage.setItem('isViewer', 'true');
+    showToast('Welcome! You are now viewing as a guest.', 'success');
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    // If admin, sign out from Supabase
+    if (isAdmin) {
+      await signOut();
+    }
+    setIsAdmin(false);
+    setIsViewer(false);
+    localStorage.setItem('isAdmin', 'false');
+    localStorage.setItem('isViewer', 'false');
+    setLoginEmail('');
+    setLoginPassword('');
+    showToast('Logged out successfully!', 'success');
+  };
+
+  // Show login page before main content (if not logged in as admin or viewer)
+  if (!isAdmin && !isViewer) {
+    return (
+      <div className="min-h-screen bg-dark-900 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md"
+        >
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent mb-2">
+              Portfolio
+            </h1>
+            <p className="text-gray-400">Sign in to continue</p>
+          </div>
+          
+          <div className="space-y-6">
+            {/* Admin Login Section */}
+            <div className="bg-dark-800 border border-white/10 rounded-2xl p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Admin Login</h2>
+              <p className="text-gray-400 text-sm mb-4">Full access to manage projects</p>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-gray-400 text-sm mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    className="w-full px-4 py-3 bg-dark-900 border border-white/10 rounded-lg text-white focus:outline-none focus:border-cyan-400 transition-colors"
+                    placeholder="admin@example.com"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-400 text-sm mb-2">Password</label>
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    className="w-full px-4 py-3 bg-dark-900 border border-white/10 rounded-lg text-white focus:outline-none focus:border-cyan-400 transition-colors"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loginLoading}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {loginLoading ? 'Logging in...' : 'Login as Admin'}
+                </button>
+              </form>
+            </div>
+            
+            {/* Divider */}
+            <div className="flex items-center gap-4">
+              <div className="flex-1 h-px bg-white/10" />
+              <span className="text-gray-500 text-sm">OR</span>
+              <div className="flex-1 h-px bg-white/10" />
+            </div>
+            
+            {/* Viewer Login Section */}
+            <div className="bg-dark-800 border border-white/10 rounded-2xl p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">View as Guest</h2>
+              <p className="text-gray-400 text-sm mb-4">Browse the portfolio without editing</p>
+              <button
+                onClick={handleViewerLogin}
+                className="w-full px-4 py-3 border border-white/20 text-white font-semibold rounded-lg hover:bg-white/10 transition-colors"
+              >
+                Enter as Viewer
+              </button>
+            </div>
+          </div>
+          
+          <p className="text-center text-gray-500 text-sm mt-6">
+            Protected by Supabase Authentication
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
 
   const handleProjectAdded = () => {
     loadProjects();
@@ -1325,14 +1481,14 @@ function App() {
       
       <main>
         <HeroSection />
-        <ProjectsSection projects={projects} onEdit={handleEdit} onDelete={handleDelete} />
+        <ProjectsSection projects={projects} onEdit={handleEdit} onDelete={handleDelete} isAdmin={isAdmin} />
         <AboutSection metadata={siteMetadata} onUpdate={setSiteMetadata} />
         <ContactSection metadata={siteMetadata} onUpdate={setSiteMetadata} />
       </main>
       
-      <Footer siteMetadata={siteMetadata} />
+      <Footer siteMetadata={siteMetadata} isAdmin={isAdmin} isViewer={isViewer} onLogout={handleLogout} />
       
-      <FloatingAddButton onClick={() => setIsModalOpen(true)} />
+      {isAdmin && <FloatingAddButton onClick={() => setIsModalOpen(true)} />}
       
       <AddProjectModal
         isOpen={isModalOpen}

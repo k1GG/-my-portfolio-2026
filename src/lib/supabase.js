@@ -7,6 +7,64 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'demo-key';
 // Create Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Admin authentication functions
+export const signInWithEmail = async (email, password) => {
+  try {
+    if (supabaseUrl === 'https://demo.supabase.co' || !supabaseUrl.includes('supabase.co')) {
+      console.log('Demo mode - admin login would happen with:', email);
+      // Simulate successful login in demo mode
+      return { success: true, data: { user: { email } } };
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error signing in:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+export const signOut = async () => {
+  try {
+    if (supabaseUrl === 'https://demo.supabase.co' || !supabaseUrl.includes('supabase.co')) {
+      console.log('Demo mode - admin logout');
+      return { success: true };
+    }
+
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('Error signing out:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+export const getCurrentUser = async () => {
+  try {
+    if (supabaseUrl === 'https://demo.supabase.co' || !supabaseUrl.includes('supabase.co')) {
+      return null;
+    }
+
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    return user;
+  } catch (error) {
+    console.error('Error getting current user:', error.message);
+    return null;
+  }
+};
+
+// Listen for auth changes
+export const onAuthStateChange = (callback) => {
+  return supabase.auth.onAuthStateChange(callback);
+};
+
 // Database table names
 export const PROJECTS_TABLE = 'projects';
 export const SITE_METADATA_TABLE = 'site_metadata';
